@@ -20,8 +20,7 @@
 
     <div class="main-content">
         <!-- Componente Livewire para el chat -->
-        @livewire(\App\Http\Livewire\ChatInterface::class)
-        
+        @livewire('chat-interface')        
         <div class="info-section">
             <div class="feature-card">
                 <h3>Velocidad Garantizada</h3>
