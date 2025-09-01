@@ -79,7 +79,7 @@
                     Revisión de contratos<br>
                     Consultas por WhatsApp<br>
                     Asesoría estratégica</p>
-                    <button class="subscribe-btn" onclick="subscribe('pro')">Contratar</button>
+                    <button class="subscribe-btn" onclick="subscribe('professional')">Contratar</button>
                 </div>
             </div>
         </div>

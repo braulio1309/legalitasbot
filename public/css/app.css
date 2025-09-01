@@ -667,3 +667,102 @@ body {
         gap: 15px;
     }
 }
+
+/* Estilos para formularios de suscripción en el chat */
+.chat-container .bot-message .subscription-form {
+    background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,237,78,0.1) 100%);
+    border: 2px solid rgba(255,215,0,0.3);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 15px 0;
+}
+
+.chat-container .bot-message .subscription-header {
+    text-align: center;
+    color: #2d1b69;
+    margin-bottom: 20px;
+}
+
+.chat-container .bot-message .subscription-price {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #ffd700;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.chat-container .bot-message .subscription-features {
+    text-align: left;
+    margin: 20px 0;
+    padding-left: 20px;
+}
+
+.chat-container .bot-message .subscription-features li {
+    margin-bottom: 10px;
+    color: #2d1b69;
+}
+
+.chat-container .bot-message .subscription-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.chat-container .bot-message .subscription-security {
+    text-align: center;
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 15px;
+}
+
+    .payment-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem; /* Espacio entre los elementos */
+        padding: 2rem;
+        background-color: #f7fafc; /* Color de fondo */
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .stripe-card-element {
+        padding: 1rem;
+        border: 1px solid #e2e8f0; /* Borde más claro */
+        border-radius: 0.5rem;
+        background-color: #ffffff;
+    }
+    .subscribe-button {
+        width: 100%;
+        background-color: #4c51bf; /* Color índigo más oscuro */
+        color: #ffffff;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: background-color 0.2s ease-in-out;
+    }
+    .subscribe-button:hover {
+        background-color: #5a67d8; /* Cambio de color al pasar el ratón */
+    }
+    .plan-details {
+        text-align: center;
+        margin-bottom: 2rem;
+        background-color: #e2e8f0;
+        padding: 1.5rem;
+        border-radius: 1rem;
+    }
+    .plan-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #2d3748;
+        margin-bottom: 1rem;
+    }
+    .plan-details ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .plan-details li {
+        margin-bottom: 0.5rem;
+        color: #4a5568;
+    }

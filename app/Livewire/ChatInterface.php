@@ -2,11 +2,14 @@
 
 namespace App\Livewire;
 
+use App\Models\Query;
 use Livewire\Component;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\On;
+use App\Services\AnthropicService;
+use Stripe\StripeClient;
 
 class ChatInterface extends Component
 {
@@ -15,7 +18,7 @@ class ChatInterface extends Component
     public $isLoading = false;
     public $userCount = 47;
     public $responseTime = '2m 30s';
-    
+
     // Propiedades para autenticación
     public $showLoginForm = false;
     public $showRegisterForm = false;
@@ -25,8 +28,37 @@ class ChatInterface extends Component
     public $registerEmail = '';
     public $registerPassword = '';
 
+    // Propiedades para suscripción
+    public $showPaymentForm = false;
+    public $selectedPlan = null;
+    public $plans;
+    public $stripeError = '';
+    public $paymentProcessing = false;
+    public $showSuscribe = false;
+
+    public $response = '';
+
+    public $client_secret = false;
+
+
     public function mount()
     {
+
+        $this->plans = [
+            'premium' => [
+                'name' => 'Premium',
+                'price' => 9.99,
+                'features' => ['Consultas ILIMITADAS', 'Cartas personalizadas', 'Análisis jurídico profundo', 'Formularios legales', 'Soporte prioritario'],
+                'stripe_price_id' => env('STRIPE_PREMIUM_PRICE_ID') // Agregar esto a tu .env
+            ],
+            'professional' => [
+                'name' => 'Professional',
+                'price' => 19.99,
+                'features' => ['Todo Premium +', 'Documentos complejos', 'Revisión de contratos', 'Consultas por WhatsApp', 'Asesoría estratégica'],
+                'stripe_price_id' => env('STRIPE_PROFESSIONAL_PRICE_ID') // Agregar esto a tu .env
+            ]
+        ];
+
         // Mensaje inicial del bot
         $this->showWelcomeMessage();
     }
@@ -61,7 +93,7 @@ class ChatInterface extends Component
         }
     }
 
-     public function sendMessage()
+    public function sendMessage()
     {
         if (!Auth::check()) {
             $this->showLoginForm = true;
@@ -82,38 +114,54 @@ class ChatInterface extends Component
         $this->isLoading = true;
 
         // Simular respuesta del bot (ahora desde PHP)
-        $this->simulateBotResponse($userMessage);
+        $this->simulateBotResponse('Eres un asistente legal especializado en legislación española. Responde esta consulta si tiene que ver con la legislacion española, si no tiene nada que ver con la ley por favor responde que eres un asistente exclusivamente de la ley: '.$userMessage);
     }
 
     private function simulateBotResponse($userMessage)
     {
-        // Aquí es donde en el futuro integrarás con tu API
-        // Por ahora simulamos una respuesta localmente
-        
-        $responses = [
-            "Entiendo tu consulta sobre <strong>" . e($userMessage) . "</strong>. Según el artículo 18 de la Ley de Arrendamientos Urbanos, el propietario necesita tu consentimiento para entrar, excepto en casos de emergencia.",
-            "Analizando tu situación con <strong>" . e($userMessage) . "</strong>. El Código Civil establece en su artículo 1902 que el que por acción u omisión causa daño a otro, interviniendo culpa o negligencia, está obligado a reparar el daño causado.",
-            "Para <strong>" . e($userMessage) . "</strong>, la jurisprudencia del Tribunal Supremo ha establecido que se deben considerar varios factores antes de proceder.",
-            "Voy a generar una carta personalizada para <strong>" . e($userMessage) . "</strong>. Necesitaré algunos datos adicionales para completarla correctamente."
-        ];
-        
-        $randomResponse = $responses[array_rand($responses)];
-        
-        // Simular delay de procesamiento (2 segundos)
-        sleep(2);
-        
-        $this->addBotResponse($randomResponse);
+
+        $anthropic = new AnthropicService();
+        $this->response = $anthropic->sendMessage($userMessage);
+
+
+        $this->addBotResponse($this->response, $userMessage);
+        $this->dispatch('message.processed');
+
     }
 
-    public function addBotResponse($response)
+    public function addBotResponse($response, $message = '')
     {
+
+        if (Auth::check() && !Auth::user()->canMakeQuery()) {
+            $response = 'Ya consumiste sus consultas mensuales suscribete para disfrutas de consultas ILIMITADAS';
+        }
+
         $this->messages[] = [
             'type' => 'bot',
             'content' => $response
         ];
-        
+        $question = explode(':', $message, 2);
         $this->isLoading = false;
+        if(Auth::check()){
+            Query::create([
+                'user_id' => Auth::user()->id,
+                'question' => trim($question[1]),
+                'response' => $response,
+                'model_used' => 'claude-opus-4-20250514',
+                'token_count' => 1200,
+                'cost' => 0,
+                'response_time' => 1,
+                'ip_address' => '127.0.0.1',
+                'user_agent' => '1',
+                'metadata' => '0'
+            ]);
+            $user = Auth::user();
+            $user->increment('queries_this_month');
+
+        }
+        
         $this->dispatch('scroll-to-bottom');
+        $this->dispatch('message.processed');
     }
 
 
@@ -145,7 +193,7 @@ class ChatInterface extends Component
             'type' => 'bot',
             'content' => $authMessage
         ];
-        
+
         $this->dispatch('scroll-to-bottom');
     }
 
@@ -249,7 +297,7 @@ class ChatInterface extends Component
 
         if (Auth::attempt(['email' => $this->loginEmail, 'password' => $this->loginPassword])) {
             $user = Auth::user();
-            
+
             // Mostrar mensaje de éxito
             $this->messages[] = [
                 'type' => 'bot',
@@ -320,6 +368,124 @@ class ChatInterface extends Component
     {
         $this->showRegister();
     }
+
+    public function showSubscriptionForm($plan)
+    {
+        if (!Auth::check()) {
+            $this->showLoginForm = true;
+            $this->addAuthMessage();
+            return;
+        }
+
+        $this->selectedPlan = $plan;
+        $this->showPaymentForm = true;
+        $this->showSuscribe = true;
+        $this->dispatch('scroll-to-bottom');
+
+        
+    }
+    
+    public function continueChatting()
+    {
+        $this->selectedPlan = null;
+        $this->showPaymentForm = false;
+
+        $this->messages[] = [
+            'type' => 'bot',
+            'content' => "¡Perfecto! ¿En qué más puedo ayudarte?"
+        ];
+
+        $this->dispatch('scroll-to-bottom');
+    }
+
+    public function cancelSubscription()
+    {
+        $this->showPaymentForm = false;
+        $this->selectedPlan = null;
+        $this->stripeError = '';
+
+        $this->messages[] = [
+            'type' => 'bot',
+            'content' => "Entendido. ¿En qué más puedo ayudarte?"
+        ];
+
+        $this->dispatch('scroll-to-bottom');
+        $this->dispatch('destroy-stripe');
+    }
+
+    #[On('show-subscription')]
+    public function handleShowSubscription($plan)
+    {
+        $this->showSubscriptionForm($plan);
+    }
+
+    public $paymentMethod;
+
+    public function subscribe($plan = false)
+    {
+        $user = Auth::user();
+        try {
+            $plan = $this->plans[$this->selectedPlan];
+            // Suscribir al usuario al plan mensual
+            $user->newSubscription($plan['name'], $plan['stripe_price_id'])
+                ->create($this->paymentMethod);
+
+            $stripe = new StripeClient(env('STRIPE_SECRET'));
+
+            // Crear suscripción en Stripe
+            $subscription = $stripe->subscriptions->create([
+                'customer' => $user->stripe_id,
+                'items' => [[
+                    'price' => $plan['stripe_price_id'],
+                ]],
+            ]);
+
+            // Guardar en tu base de datos
+            $user->update([
+                'plan' => $plan['name'],
+                'stripe_subscription_id' => $subscription->id,
+            ]);
+
+            $this->messages[] = [
+                'type' => 'bot',
+                'content' => "
+                <div style='background: rgba(107, 255, 154, 0.1); padding: 20px; border-radius: 15px; margin: 15px 0; border: 2px solid #6bff72ff;'>
+                    <h4 style='color: #6bff72ff; text-align: center; margin-bottom: 15px;'>Pago exitoso</h4>
+                    <p style='text-align: center; color: #2d1b69;'>
+                        Pago exitoso, gracias por suscribirte
+                    </p>
+                </div>"
+            ];
+            $this->showSuscribe = False;
+            $this->messages[] = [
+                'type' => 'bot',
+                'content' => "
+                En que puedo ayudarte?"
+            ];
+        } catch (\Exception $e) {
+            $this->messages[] = [
+                'type' => 'bot',
+                'content' => "
+                <div style='background: rgba(255,107,107,0.1); padding: 20px; border-radius: 15px; margin: 15px 0; border: 2px solid #ff6b6b;'>
+                    <h4 style='color: #ff6b6b; text-align: center; margin-bottom: 15px;'>Error en el pago</h4>
+                    <p style='text-align: center; color: #2d1b69;'>
+                        Hubo un problema procesando tu pago: {$e->getMessage()}
+                    </p>
+                    <div style='text-align: center; margin-top: 15px;'>
+                        <button onclick='initStripe()' style='background: #ffd700; color: #2d1b69; padding: 12px 25px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; margin: 5px;'>
+                            Reintentar pago
+                        </button>
+                        <button wire:click='cancelSubscription' style='background: #ccc; color: #666; padding: 12px 25px; border: none; border-radius: 25px; cursor: pointer; margin: 5px;'>
+                            Cancelar
+                        </button>
+                    </div>
+                </div>"
+            ];
+        }
+        $this->dispatch('scroll-to-bottom');
+
+    }
+
 
     public function render()
     {
