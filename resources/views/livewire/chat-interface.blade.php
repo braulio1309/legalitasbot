@@ -85,6 +85,7 @@
 
         <div class="input-section">
             <input type="text"
+                id='messageInput'
                 class="question-input"
                 wire:model="newMessage"
                 placeholder="Ej: ¿Mi casero puede entrar sin avisar? | Crea una carta para reclamar mi fianza"
@@ -107,7 +108,18 @@
         $wire.on('scroll-to-bottom', () => {
             const chatContainer = document.getElementById('chatContainer');
             if (chatContainer) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                requestAnimationFrame(() => {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                });
+            }
+        });
+
+        $wire.on('message-sent', () => {
+            // Enfocar y limpiar el campo de entrada
+            const messageInput = document.getElementById('messageInput');
+            messageInput.value = ''
+            if (messageInput) {
+                messageInput.focus();
             }
         });
 

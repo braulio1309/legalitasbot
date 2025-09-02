@@ -766,3 +766,29 @@ body {
         margin-bottom: 0.5rem;
         color: #4a5568;
     }
+
+    .chat-container {
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    height: 400px; /* Ajusta según necesites */
+    padding: 10px;
+}
+
+/* Estilo para la barra de scroll */
+.chat-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.chat-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

@@ -67,6 +67,7 @@ class ChatInterface extends Component
     {
         if (Auth::check()) {
             $user = Auth::user();
+            
             $this->messages[] = [
                 'type' => 'bot',
                 'content' => "<strong>¡Bienvenido de nuevo, {$user->name}!</strong><br><br>
@@ -74,6 +75,9 @@ class ChatInterface extends Component
                 Consultas disponibles: " . ($user->plan === 'free' ? '3 mensuales' : 'ILIMITADAS') . "<br><br>
                 ¿En qué puedo ayudarte hoy?"
             ];
+            $this->loadChatHistory($user);
+
+            
         } else {
             $this->messages[] = [
                 'type' => 'bot',
@@ -90,6 +94,35 @@ class ChatInterface extends Component
 
             // Mostrar mensaje de registro después de 2 segundos
             $this->dispatch('show-auth-message');
+            
+        }
+        $this->dispatch('scroll-to-bottom');
+
+    }
+
+    private function loadChatHistory(User $user)
+    {
+        // Obtener las consultas previas ordenadas por fecha de creación
+        $queries = Query::where('user_id', $user->id)
+                        ->orderBy('created_at', 'asc')
+                        ->get();
+        
+        // Limpiar mensajes actuales
+        $this->messages = [];
+        
+        // Agregar cada consulta y respuesta al historial de chat
+        foreach ($queries as $query) {
+            // Mensaje del usuario
+            $this->messages[] = [
+                'type' => 'user',
+                'content' => $query->question
+            ];
+            
+            // Respuesta del bot
+            $this->messages[] = [
+                'type' => 'bot',
+                'content' => $query->response
+            ];
         }
     }
 
@@ -111,10 +144,11 @@ class ChatInterface extends Component
 
         $userMessage = $this->newMessage;
         $this->newMessage = '';
+        
         $this->isLoading = true;
 
-        // Simular respuesta del bot (ahora desde PHP)
         $this->simulateBotResponse('Eres un asistente legal especializado en legislación española. Responde esta consulta si tiene que ver con la legislacion española, si no tiene nada que ver con la ley por favor responde que eres un asistente exclusivamente de la ley: '.$userMessage);
+        $this->dispatch('message-sent');
     }
 
     private function simulateBotResponse($userMessage)
@@ -125,7 +159,6 @@ class ChatInterface extends Component
 
 
         $this->addBotResponse($this->response, $userMessage);
-        $this->dispatch('message.processed');
 
     }
 
@@ -307,9 +340,12 @@ class ChatInterface extends Component
                 Consultas disponibles: " . ($user->plan === 'free' ? '3 mensuales' : 'ILIMITADAS')
             ];
 
+
+
             $this->showLoginForm = false;
             $this->showRegisterForm = false;
             $this->reset(['loginEmail', 'loginPassword']);
+            $this->loadChatHistory($user);
             $this->dispatch('scroll-to-bottom');
         } else {
             $this->addError('login', 'Credenciales incorrectas. Inténtalo de nuevo.');
