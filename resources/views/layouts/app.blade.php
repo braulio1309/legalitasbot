@@ -14,6 +14,8 @@
     </style>
     <!-- Livewire Styles -->
     @livewireStyles
+    @livewireAssets
+
 </head>
 <body>
     <!-- Floating particles -->
