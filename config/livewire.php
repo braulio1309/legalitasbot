@@ -114,7 +114,7 @@ return [
     |
     */
 
-    'inject_assets' => true,
+    'inject_assets' => false,
 
     /*
     |---------------------------------------------------------------------------
@@ -157,4 +157,6 @@ return [
     */
 
     'pagination_theme' => 'tailwind',
+
+    'assets_url' => 'https://legalitasbot.com'
 ];
